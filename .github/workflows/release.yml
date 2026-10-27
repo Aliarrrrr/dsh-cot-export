@@ -1,0 +1,30 @@
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: test + pack + release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24.x'
+      - name: Unit tests
+        run: node --test test/cot.test.mjs
+      - name: Verify tag matches package.json
+        run: |
+          node -e "const p=require('./package.json'); const t=process.env.GITHUB_REF_NAME.replace(/^v/,''); if(p.version!==t){ console.error('tag',t,'!= package.json',p.version); process.exit(1) }"
+      - name: Pack
+        run: npm pack
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: '*.tgz'
+          generate_release_notes: true

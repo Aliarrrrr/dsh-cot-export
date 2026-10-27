@@ -1,0 +1,5 @@
+node_modules/
+cot-exports/
+*.tgz
+.DS_Store
+Thumbs.db

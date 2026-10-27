@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" role="img" aria-labelledby="title">
+  <title id="title">Chain-of-thought export</title>
+  <path d="M5.2 3.8h8.6L18.8 8.6v11.6H5.2z"/>
+  <path d="M13.8 3.8v4.8h5"/>
+  <circle cx="8.6" cy="12.4" r="1.15"/>
+  <circle cx="11.9" cy="15.9" r="1.15"/>
+  <circle cx="15.3" cy="11.9" r="1.15"/>
+  <path d="M9.6 13.1l1.4 1.9M13.1 15.3l1.3-2.3"/>
+  <path d="M7.4 19.4h8.2"/>
+</svg>

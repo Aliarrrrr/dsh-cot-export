@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "CoT 导出",
+    "description": "把一个会话里模型的完整思维链导出为 Markdown、JSON、JSONL 或纯文本，并交给其他会话或 agent 做复盘审查。"
+  }
+}

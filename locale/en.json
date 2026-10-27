@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "CoT Export",
+    "description": "Export a session's complete model chain-of-thought to Markdown, JSON, JSONL or text, and hand the artifact to any other session or agent for review."
+  }
+}

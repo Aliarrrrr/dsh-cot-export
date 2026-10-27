@@ -1,0 +1,19 @@
+# dsh-cot-export bundle patch.
+#
+# One insert row mounts the Host half; the Client half is declared by this
+# package's `dsh.client` block and served from the same bundle, so no second
+# row is needed.
+#
+# Aggregate double-mount guard: an aggregate bundle (for example a "web-ui-all"
+# style package) may already mount dsh-cot-export under its own entry id. Two
+# mounts would register the same tool names, the same command and the same
+# exact Fetch route twice, and the loader fails the whole tree. The `!!js`
+# expression below backs THIS row off when another enabled entry already
+# mounts the package, so the aggregate instance owns the feature. The loader
+# evaluates it while processing this row, so the aggregate bundle must precede
+# this one in `dsh.profile.bundles` — the normal install order, since
+# `dsh plugin add` appends new bundles last.
+- insert:
+    - id: cot-export
+      name: 'dsh-cot-export'
+      disabled: !!js "[...ctx.loader.entries()].some((e) => e.options.name === 'dsh-cot-export' && e.options.id !== 'cot-export' && !e.disabled)"
