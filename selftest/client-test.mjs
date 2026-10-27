@@ -401,7 +401,7 @@ assert.match(panelText, /保存到/)
 const formats = formatButtons(panel)
 assert.deepEqual(
   formats.map((node) => textOf(node)),
-  ['Markdown', 'JSON', 'JSONL', 'Text'],
+  ['Markdown', 'HTML', 'JSON', 'JSONL', 'Text'],
   'an explicit format control is visible',
 )
 assert.equal(formats.filter((node) => node.props['data-active'] === 'true').length, 1, 'exactly one active format')

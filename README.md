@@ -81,15 +81,22 @@ inherited from a fork parent is marked `inherited`.
 | `json` | `.json` | One object: `{schema, session, exported_at, scope, stats, turns[]}` |
 | `jsonl` | `.jsonl` | One object per step — grep, `jq`, or feed straight into a pipeline |
 | `text` | `.txt` | Minimal plain text |
+| `html` | `.html` | Self-contained timeline for browsing: one card per turn, one block per step, collapsible reasoning/answer/tool results, expand-all buttons, anchors, and a light/dark stylesheet driven by `prefers-color-scheme`. No external assets, and every piece of session text is HTML-escaped. |
+
+`html` is the replay view: it is the only format that also carries recorded
+**tool results** (success/error, arguments, and up to 4000 characters of each
+result, marked when truncated), which is what makes a finished session readable
+after the fact without any extra tooling.
 
 ## One-click export
 
 Open a session and click the CoT button in the header. One click exports with the
 selected format and opens a result panel anchored under the button:
 
-- **format** — an explicit segmented control (`Markdown · JSON · JSONL · Text`).
-  Picking another format re-exports immediately and updates the same panel, so
-  the current format is always visible instead of hidden behind a menu;
+- **format** — an explicit segmented control
+  (`Markdown · HTML · JSON · JSONL · Text`). Picking another format re-exports
+  immediately and updates the same panel, so the current format is always
+  visible instead of hidden behind a menu;
 - **numbers** — turns, steps, reasoning characters, reasoning tokens;
 - **file** — artifact name and full path; clicking the block copies the path;
 - **save to** — the folder the artifact was written to, with **更改** opening the

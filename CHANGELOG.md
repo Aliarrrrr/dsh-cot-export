@@ -4,6 +4,32 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project adheres
 to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.0] — 2026-10-27
+
+### Added
+
+- **`html` format (the replay view)**, replacing the need for a separate
+  `dsh-replay` CLI: a self-contained timeline with one card per turn and one block
+  per step, collapsible reasoning / answer / tool sections, an Expand all /
+  Collapse all pair, turn anchors, and a light/dark stylesheet driven by
+  `prefers-color-scheme`. No external assets; the only script is the fixed
+  expand/collapse handler; every piece of session text is HTML-escaped, so
+  reasoning that contains markup cannot inject anything.
+- **Tool results in the extracted model**: `tool/call` events are paired with
+  their `tool/result` by call id, and each step now carries `tool_results`
+  (`call_id`, `name`, `is_error`, `chars`, `text`, `truncated`). Results are capped
+  at 4000 characters per entry and marked when cut. This is what makes the HTML
+  view a real trajectory rather than reasoning only.
+- `tool_calls[]` blocks keep their `id`, so the JSON output can be joined against
+  the results too.
+- `htm` and `replay` are accepted as format aliases for `html`; the format
+  control, `/cot html`, the tool's `format` argument and the route's
+  `format=html` all reach it.
+
+### Changed
+
+- The header panel is 360px wide to fit five format buttons.
+
 ## [1.2.1] — 2026-10-27
 
 ### Fixed

@@ -263,7 +263,7 @@ async function exerciseSession(logFile, outputDir, runtime) {
   assert.match(rendered[0].text, /cot_review/)
 
   // --- every format writes a distinct artifact ------------------------------
-  for (const format of ['json', 'jsonl', 'text']) {
+  for (const format of ['json', 'jsonl', 'text', 'html']) {
     const other = await exportTool.execute({ session_id: log.header.id, format }, caller)
     validate(exportTool.output.schema, other, `cot_export[${format}]`)
     const text = await readFile(other.path, 'utf8')
@@ -271,10 +271,24 @@ async function exerciseSession(logFile, outputDir, runtime) {
       const parsed = JSON.parse(text)
       assert.equal(parsed.schema, 'dsh-cot/v1')
       assert.equal(parsed.stats.steps, other.steps)
+      const withResults = parsed.turns.flatMap((turn) => turn.steps).filter((step) => Array.isArray(step.tool_results))
+      if (withResults.length > 0) {
+        const sample = withResults[0].tool_results[0]
+        assert.equal(typeof sample.text, 'string', 'a result keeps its text')
+        assert.equal(typeof sample.chars, 'number')
+      }
     } else if (format === 'jsonl') {
       const jsonlRows = text.trim().split('\n')
       assert.equal(jsonlRows.length, other.steps)
       jsonlRows.forEach((line) => JSON.parse(line))
+    } else if (format === 'html') {
+      assert.match(text, /^<!doctype html>/)
+      assert.match(text, /<meta name="generator" content="dsh-cot-export/)
+      assert.match(text, /<section class="turn" id="t1">/)
+      assert.match(text, /data-act="expand"/)
+      assert.equal((text.match(/<script>/g) ?? []).length, 1, 'only the fixed expand handler is scripted')
+      assert.doesNotMatch(text, /<script>alert/, 'session text is never injected as markup')
+      assert.ok(other.path.endsWith('.html'))
     } else {
       assert.match(text, /^=== DSH chain-of-thought export ===/)
     }

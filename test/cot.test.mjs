@@ -16,6 +16,7 @@ import path from 'node:path'
 import {
   buildExportPath,
   cotError,
+  escapeHtml,
   extensionOf,
   extractCoT,
   formatIsoWithOffset,
@@ -24,6 +25,7 @@ import {
   parseScope,
   reasoningFromAttemptStream,
   render,
+  renderHtml,
   renderJsonl,
   renderMarkdownWithIndex,
   shortSessionId,
@@ -41,7 +43,12 @@ function assistant(input) {
   for (const text of input.reasoning ?? []) content.push({ type: 'reasoning', text })
   for (const text of input.text ?? []) content.push({ type: 'text', text })
   for (const call of input.tools ?? []) {
-    content.push({ type: 'tool-call', id: `call_${call.name}`, name: call.name, arguments: call.arguments ?? '{}' })
+    content.push({
+      type: 'tool-call',
+      id: call.id ?? `call_${call.name}`,
+      name: call.name,
+      arguments: call.arguments ?? '{}',
+    })
   }
   const data = {
     turn: input.turn,
@@ -277,7 +284,7 @@ test('JSONL emits one parseable row per step', () => {
 
 test('the format dispatcher returns a trailing newline for every format', () => {
   const model = extractCoT({ session, events: baseEvents, surfaceOf: new Map(), exportedAt: 1 })
-  for (const format of ['markdown', 'json', 'jsonl', 'text']) {
+  for (const format of ['markdown', 'json', 'jsonl', 'text', 'html']) {
     const rendered = render(model, format)
     assert.ok(rendered.text.endsWith('\n'), format)
     assert.ok(rendered.text.length > 40, format)
@@ -370,4 +377,99 @@ test('review windows cover every turn line range', () => {
   assert.equal(single[0].line_from, turnLines[0].lineFrom)
   assert.equal(single[0].line_to, turnLines[turnLines.length - 1].lineTo)
   assert.equal(single[0].chars, windows.reduce((total, window) => total + window.chars, 0))
+})
+
+test('pairs every tool call with its recorded result and truncates long results', () => {
+  const long = 'x'.repeat(5000)
+  const events = sequence([
+    userMessage({ turn: 1, step: 1, time: 10, text: 'go' }),
+    { type: 'tool/call', time: 11, data: { turn: 1, step: 1, callId: 'c1', name: 'read', arguments: '{"path":"a"}' } },
+    {
+      type: 'tool/result',
+      time: 12,
+      data: {
+        turn: 1,
+        step: 1,
+        message: { role: 'tool', toolCallId: 'c1', source: { kind: 'tool', callId: 'c1' }, content: [{ type: 'text', text: long }] },
+      },
+    },
+    { type: 'tool/call', time: 13, data: { turn: 1, step: 1, callId: 'c2', name: 'pwsh', arguments: '{}' } },
+    {
+      type: 'tool/result',
+      time: 14,
+      data: {
+        turn: 1,
+        step: 1,
+        message: { role: 'tool', toolCallId: 'c2', isError: true, content: [{ type: 'text', text: 'boom' }] },
+      },
+    },
+    assistant({
+      turn: 1,
+      step: 1,
+      time: 15,
+      reasoning: ['think'],
+      tools: [
+        { id: 'c1', name: 'read', arguments: '{"path":"a"}' },
+        { id: 'c2', name: 'pwsh', arguments: '{}' },
+      ],
+    }),
+  ])
+  const model = extractCoT({ session, events, surfaceOf: new Map(), exportedAt: 1 })
+  const step = model.turns[0].steps[0]
+  assert.equal(step.tool_calls.length, 2)
+  assert.equal(step.tool_calls[0].id, 'c1', 'the call keeps the id that pairs it with the result')
+  assert.equal(step.tool_results.length, 2)
+  const [first, second] = step.tool_results
+  assert.equal(first.call_id, 'c1')
+  assert.equal(first.name, 'read')
+  assert.equal(first.chars, 5000)
+  assert.equal(first.truncated, true)
+  assert.equal(first.text.length, 4001, 'truncated text keeps the cap plus an ellipsis')
+  assert.equal(second.name, 'pwsh')
+  assert.equal(second.is_error, true)
+  assert.equal(second.text, 'boom')
+
+  const html = renderHtml(model)
+  assert.match(html, /read <span class="muted">ok<\/span>/)
+  assert.match(html, /pwsh <span class="muted">failed<\/span>/)
+  assert.match(html, /result · truncated/)
+  assert.match(html, /<pre class="err">boom<\/pre>/)
+})
+
+test('the HTML timeline is self-contained, anchorable and escaped', () => {
+  const events = sequence([
+    userMessage({ turn: 1, step: 1, time: 10, text: 'hi <b>there</b>' }),
+    assistant({
+      turn: 1,
+      step: 1,
+      time: 11,
+      reasoning: ['plan <script>alert(1)</script>', '</details><img src=x onerror=alert(2)>'],
+      text: ['done <hr>'],
+    }),
+  ])
+  const model = extractCoT({ session, events, surfaceOf: new Map(), exportedAt: 1 })
+  const html = renderHtml(model)
+
+  assert.match(html, /^<!doctype html>\n<html lang="en">/)
+  assert.match(html, /<meta name="generator" content="dsh-cot-export">/)
+  assert.match(html, /<title>CoT timeline · /)
+  assert.match(html, /<section class="turn" id="t1">/)
+  assert.match(html, /<details class="box">/)
+  assert.match(html, /data-act="expand"/)
+
+  // Session text is escaped, never markup.
+  assert.ok(!html.includes('<script>alert(1)</script>'), 'reasoning must not inject script tags')
+  assert.ok(html.includes('&lt;script&gt;alert(1)&lt;/script&gt;'))
+  assert.ok(!html.includes('<img src=x'), 'attribute injection must be escaped')
+  assert.ok(html.includes('&lt;/details&gt;&lt;img src=x onerror=alert(2)&gt;'))
+  assert.ok(html.includes('hi &lt;b&gt;there&lt;/b&gt;'))
+  assert.equal((html.match(/<script>/g) ?? []).length, 1, 'the only script is the fixed expand handler')
+  assert.match(html, /document\.addEventListener\("click"/)
+
+  // Escaping helper behaviour that the renderer relies on.
+  assert.equal(escapeHtml(`<&>"'`), '&lt;&amp;&gt;&quot;&#39;')
+  assert.equal(extensionOf('html'), '.html')
+  assert.match(mimeOf('html'), /^text\/html/)
+  assert.equal(parseFormat('htm'), 'html')
+  assert.equal(parseFormat('replay'), 'html')
 })
