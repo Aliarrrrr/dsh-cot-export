@@ -1,6 +1,6 @@
 {
   "name": "dsh-cot-export",
-  "version": "1.0.0",
+  "version": "1.2.1",
   "type": "module",
   "description": "Export a DSH session's complete model chain-of-thought to Markdown, JSON, JSONL or text, and hand the artifact to any other session or agent for review.",
   "icon": "./icon.svg",

@@ -63,9 +63,10 @@ cot-exports/fix-the-failing-test-aaaa1111-20261027-211759.md
 ```
 
 The Markdown artifact starts with YAML frontmatter (session, workspace, preset,
-models, export scope, counts) and a `## Index` table that maps each turn to its
-line number, so a reviewer can page through a large export with the built-in
-`read` tool instead of loading it whole.
+models, export scope, counts, and an `exporter: dsh-cot-export@<version>`
+provenance stamp) and a `## Index` table that maps each turn to its line number,
+so a reviewer can page through a large export with the built-in `read` tool
+instead of loading it whole.
 
 Reasoning is verbatim. A step that compaction removed from the current model
 context is still exported (scope `all`) and marked
@@ -83,11 +84,54 @@ inherited from a fork parent is marked `inherited`.
 
 ## One-click export
 
-Open a session and click the CoT button in the header. It writes the Markdown
-artifact and shows a chip with the turn/character counts; the chip's tooltip is
-the absolute path, clicking the chip copies that path, `↓` downloads the same
-file, `×` dismisses. If the export route is unavailable (an older Host, or a
-path collision), the chip says so and `/cot` still works.
+Open a session and click the CoT button in the header. One click exports with the
+selected format and opens a result panel anchored under the button:
+
+- **format** — an explicit segmented control (`Markdown · JSON · JSONL · Text`).
+  Picking another format re-exports immediately and updates the same panel, so
+  the current format is always visible instead of hidden behind a menu;
+- **numbers** — turns, steps, reasoning characters, reasoning tokens;
+- **file** — artifact name and full path; clicking the block copies the path;
+- **save to** — the folder the artifact was written to, with **更改** opening the
+  host directory picker; the choice is remembered for the next export, and
+  **默认** returns to the configured default;
+- **下载** — a plain file download with no dialog. The bytes come from an
+  `inline=1` response and go through a blob URL, so the shell never navigates to
+  the export route (that would open the artifact as a page) and no duplicate
+  artifact is written;
+- **另存为…** — shown only when the shell implements the save picker; it asks
+  where to put the same bytes;
+- **复盘包** — writes the CoT plus `REVIEW.md` (rubric, window plan, delegation
+  prompt) and offers the prompt on the clipboard;
+- **× / Escape / outside click** — dismiss; the button carries a small dot while
+  a result is shown, and turns red if the last export failed.
+
+The panel reports a known failure with actionable copy instead of a raw error: a
+missing route suggests `/cot`, no recorded reasoning and an out-of-workspace
+session each say what happened. Layout follows the host: 28px square trigger,
+`--dsw-radius-*` corners, `--dsw-elevation-prominent` elevation, a
+`--dsw-focus-ring-color` focus ring, `--dsw-alias-button-info-fill` primary
+actions and `--dsw-font-*` typography — no literal colours, so it follows the
+active light/dark theme.
+
+### Route contract
+
+The header action talks to one authenticated exact route:
+
+```
+GET /api/cot.export
+  ?sessionId=<id>            required
+  &mode=export|review        review also writes REVIEW.md
+  &format=markdown|json|jsonl|text
+  &scope=all|surface
+  &dir=<absolute folder>     where the artifact is written
+  &includeContext=1|0 &includeFailedAttempts=1|0
+  &download=1                export, write, then stream the bytes
+  &inline=1                  stream the bytes of what was already written
+```
+
+`HEAD` answers whether the route exists; unknown sessions return `404`, bad
+arguments `400`, and a session without reasoning `409`.
 
 ## Slash command
 
@@ -193,7 +237,7 @@ longer want. The plugin keeps no other state.
 
 - **GitHub (recommended)**: `dsh plugin --profile <profile> add github:Aliarrrrr/dsh-cot-export`
 - **Tarball**: download the `.tgz` from the latest GitHub Release and run
-  `dsh plugin --profile <profile> add ./dsh-cot-export-1.0.0.tgz`
+  `dsh plugin --profile <profile> add ./dsh-cot-export-<version>.tgz`
 - **Local checkout**: from a clone, `dsh plugin --profile <profile> add .`
 
 A profile whose pnpm install is blocked (for example by a package directory the
@@ -219,9 +263,18 @@ managed channel.
 ## Development
 
 ```sh
-node --test test/cot.test.mjs   # 16 unit tests, nothing to install
-npm pack --dry-run              # inspect the published file list
+node --test test/cot.test.mjs        # 16 unit tests over the pure core, nothing to install
+node selftest/run.mjs <log> ...      # integration harness: real session logs through the real apply()
+node selftest/client-test.mjs        # client wiring/state machine (stub renderer, not visual proof)
+npm pack --dry-run                   # inspect the published file list
 ```
+
+The integration harness stubs only `@deepseek-ai/dsh-tools` and
+`@deepseek-ai/schemastery`, builds the plugin through its real `apply()`, and
+drives both tools, the `/cot` command and every route mode (JSON, HEAD,
+download, `mode=review`, 400/404) against decoded `session.v4.jsonl.zstd` logs.
+It validates each tool value against that tool's own output schema, so a
+schema/value drift fails there instead of at the first live call.
 
 ## Community
 

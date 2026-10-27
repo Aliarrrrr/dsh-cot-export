@@ -57,9 +57,9 @@ bundle（`dsh.bundle.patch` → `cordis.patch.yml`），含 Host 与 Client 两�
 cot-exports/fix-the-failing-test-aaaa1111-20261027-211759.md
 ```
 
-Markdown 文件以 YAML frontmatter 开头（会话、工作区、preset、模型、导出范围、计数），
-随后是 `## Index` 表格，把每一轮映射到行号；审查者可以用内置 `read` 工具按行窗口读，
-不必一次加载整份大文件。
+Markdown 文件以 YAML frontmatter 开头（会话、工作区、preset、模型、导出范围、计数、
+`exporter: dsh-cot-export@<版本>` 溯源标记），随后是 `## Index` 表格，把每一轮映射到行号；
+审查者可以用内置 `read` 工具按行窗口读，不必一次加载整份大文件。
 
 思维链是**逐字**导出的：被上下文压缩隐藏的步骤在 `all` 范围下仍会导出，并标注
 `> ⚠ superseded — hidden from the current model context by compaction`；
@@ -76,9 +76,41 @@ Markdown 文件以 YAML frontmatter 开头（会话、工作区、preset、模�
 
 ## 一键导出
 
-打开会话，点头部的 **CoT** 按钮：写出 Markdown 导出物，并显示轮数/字符数的 chip；
-chip 的 tooltip 是绝对路径，点击复制路径，`↓` 下载同一文件，`×` 关闭。如果导出路由不可用
-（旧 Host 或路径冲突），chip 会给出提示，`/cot` 仍然可用。
+打开会话，点头部的 **CoT** 按钮：一次点击按所选格式导出，并在按钮下方展开结果面板：
+
+- **格式**：显式分段控件（`Markdown · JSON · JSONL · Text`），点另一个格式就立刻重导并刷新同一面板，
+  当前格式始终可见，不再藏在菜单里；
+- **数字**：轮次、步数、推理字符、推理 token；
+- **产物**：文件名 + 绝对路径，点整块即复制路径；
+- **保存到**：显示实际写入目录，**更改** 打开宿主的目录选择器，选择会被记住，**默认** 回到配置的目录；
+- **下载**：普通文件下载，不弹任何对话框。字节走 `inline=1` 响应再经 blob URL 交给浏览器，
+  因此外壳**不会**导航到导出路由（那会把导出物当页面打开），也不会在宿主侧多写一份重复文件；
+- **另存为…**：仅当外壳实现保存对话框时出现，用来选择同一份字节存到哪个文件；
+- **复盘包**：写出 CoT + `REVIEW.md`（评分规则、窗口计划、委派提示词），并把提示词放到剪贴板；
+- **× / Escape / 点空白处**：关闭。有结果时按钮带一个小圆点，上次失败则变红。
+
+已知失败会换成可操作的文案而不是原始报错：路由不可用提示改用 `/cot`，无推理记录、跨工作区会话
+各自给出原因。版式跟宿主一致：28px 方形触发按钮、`--dsw-radius-*` 圆角、
+`--dsw-elevation-prominent` 投影、`--dsw-focus-ring-color` 焦点环、
+`--dsw-alias-button-info-fill` 主按钮、`--dsw-font-*` 字体尺度 —— 没有字面色值，深浅色都跟主题走。
+
+### 路由契约
+
+头部按钮只跟一条已鉴权的精确路由打交道：
+
+```
+GET /api/cot.export
+  ?sessionId=<id>            必填
+  &mode=export|review        review 同时写 REVIEW.md
+  &format=markdown|json|jsonl|text
+  &scope=all|surface
+  &dir=<绝对目录>            导出物写到哪里
+  &includeContext=1|0 &includeFailedAttempts=1|0
+  &download=1                导出并写盘后再把字节流回去
+  &inline=1                  只把已写好那份的字节流回去
+```
+
+`HEAD` 用来探测路由是否存在；未知会话 `404`、参数错误 `400`、没有推理记录 `409`。
 
 ## 斜杠命令
 
@@ -187,9 +219,15 @@ HMR 会在文件变化后自动重组 profile，插件无需重启即可挂载�
 ## 开发
 
 ```sh
-node --test test/cot.test.mjs   # 16 个单元测试，无需安装依赖
-npm pack --dry-run              # 查看会发布哪些文件
+node --test test/cot.test.mjs        # 16 个单元测试（纯核心），无需安装依赖
+node selftest/run.mjs <log> ...      # 集成自测：真实会话日志走真实 apply()
+node selftest/client-test.mjs        # 客户端连线/状态机（桩渲染器，不是视觉证明）
+npm pack --dry-run                   # 查看会发布哪些文件
 ```
+
+集成自测只桩接 `@deepseek-ai/dsh-tools` 与 `@deepseek-ai/schemastery`，用真实 `apply()` 起插件，
+把两个工具、`/cot` 命令和全部路由模式（JSON、HEAD、download、`mode=review`、400/404）跑一遍，
+并按每个工具自己声明的 output schema 校验返回值，所以 schema 与实现的漂移会在自测里先炸。
 
 ## 社区
 
