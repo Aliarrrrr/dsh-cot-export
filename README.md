@@ -73,6 +73,28 @@ context is still exported (scope `all`) and marked
 `> ⚠ superseded — hidden from the current model context by compaction`; a step
 inherited from a fork parent is marked `inherited`.
 
+## Relationship to the built-in session-log export
+
+DSH already ships **Download session log** (Session Header → More) and the
+`/export` command (`@deepseek-ai/dsh-session-log-export`). That is a different
+product, not a competitor:
+
+| | Built-in `/export` ZIP | This plugin |
+|---|---|---|
+| What you get | The session's **raw event log** as plain `session.vN.jsonl`, every descendant's log, `media/<attachmentId>.<ext>` images, and `files/<digest>/<name>` uploads | A **derived, readable view** of the same log in five formats |
+| Content | Every event: reasoning, tool calls and results, `system`/`developer` messages, `request/header` tool schemas, compaction, jobs, todos, approvals, command lifecycle | Reasoning blocks, user prompts, answers, tool calls, and (in HTML/JSON) tool results; internal events are dropped |
+| Size for one real session | 12.3 MB / 3,295 rows / 33 event types | 0.8–2.5 MB depending on format |
+| Shape | Machine-readable, flat, seq-ordered; needs a decoder to read comfortably | Organised by turn → step, with an index, anchors and collapsible sections |
+| For agents | No (a browser download) | Yes (`cot_export` / `cot_review` tools, any session) |
+
+Use the built-in export for a **complete archive or forensic copy** — it is the
+only thing that carries attachments and byte-exact events. Use this plugin to
+**read, review, compare or hand over** the reasoning. It cannot replace a backup:
+attachments, request headers and internal events are not in these artifacts.
+
+`derived_from: dsh-session-event-log` in the frontmatter (and the footer of an
+HTML artifact) records that distinction.
+
 ## Formats
 
 | `format` | File | Shape |

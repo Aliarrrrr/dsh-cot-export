@@ -250,6 +250,7 @@ async function exerciseSession(logFile, outputDir, runtime) {
   const markdown = await readFile(value.path, 'utf8')
   assert.match(markdown, /^---\nschema: dsh-cot\/v1\n/)
   assert.match(markdown, /## Index/)
+  assert.match(markdown, /^derived_from: dsh-session-event-log$/m, 'the artifact marks itself as a derived view')
   // Every index row's line really is that turn's heading.
   const lines = markdown.split('\n')
   const rows = [...markdown.matchAll(/^\| (\d+) \| (\d+) \| (\d+) \| (\d+) \|$/gm)]
@@ -286,6 +287,7 @@ async function exerciseSession(logFile, outputDir, runtime) {
       assert.match(text, /<meta name="generator" content="dsh-cot-export/)
       assert.match(text, /<section class="turn" id="t1">/)
       assert.match(text, /data-act="expand"/)
+      assert.match(text, /Derived view of the session event log\./, 'the footer points at the built-in archive')
       assert.equal((text.match(/<script>/g) ?? []).length, 1, 'only the fixed expand handler is scripted')
       assert.doesNotMatch(text, /<script>alert/, 'session text is never injected as markup')
       assert.ok(other.path.endsWith('.html'))

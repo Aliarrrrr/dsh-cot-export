@@ -4,6 +4,23 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project adheres
 to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.1] — 2026-10-28
+
+### Changed
+
+- **Positioning against the built-in session-log export.** DSH already ships
+  `Download session log` / `/export` (`@deepseek-ai/dsh-session-log-export`),
+  which hands over the raw event log plus attachments and descendant trees. This
+  plugin produces a derived, readable view of the same log and cannot replace
+  that archive. Artifacts and docs now say so:
+  - every extracted model carries `derived_from: dsh-session-event-log`, which
+    appears in the Markdown frontmatter and in the JSON output;
+  - an HTML artifact's footer names the derived-view boundary and points at the
+    built-in action;
+  - the `cot_export` tool description states the distinction, so an agent does not
+    mistake a CoT artifact for a backup;
+  - both READMEs gained a side-by-side section (content, size, shape, agent use).
+
 ## [1.3.0] — 2026-10-27
 
 ### Added

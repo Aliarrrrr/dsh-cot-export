@@ -65,6 +65,25 @@ Markdown 文件以 YAML frontmatter 开头（会话、工作区、preset、模�
 `> ⚠ superseded — hidden from the current model context by compaction`；
 从 fork 父会话继承的步骤标注 `inherited`。
 
+## 与原版会话日志导出的关系
+
+DSH 自带 **Download session log**（会话标题 → 更多）和 `/export` 命令
+（`@deepseek-ai/dsh-session-log-export`）。那是另一种产物，不是竞争关系：
+
+| | 原版 `/export` ZIP | 本插件 |
+|---|---|---|
+| 拿到什么 | 会话**原始事件日志**（明文 `session.vN.jsonl`）、所有子会话的日志、`media/<attachmentId>.<ext>` 图片、`files/<digest>/<name>` 上传文件 | 同一份日志的**派生可读视图**，五种格式 |
+| 内容 | 全部事件：推理、工具调用与结果、`system`/`developer` 消息、`request/header` 工具 schema、压缩、jobs、todo、审批、命令生命周期 | 推理块、用户输入、回答、工具调用，HTML/JSON 里还有工具结果；内部事件被舍弃 |
+| 一个真实会话的体积 | 12.3 MB / 3,295 行 / 33 类事件 | 按格式 0.8–2.5 MB |
+| 形态 | 机器可读、平铺、按 seq 排；要舒服阅读得先写解码器 | 按 turn → step 重组，带索引、锚点、可折叠区块 |
+| 给 agent 用 | 不能（纯浏览器下载） | 可以（`cot_export` / `cot_review` 工具，任意会话） |
+
+要**完整归档或取证副本** → 用原版导出，只有它带附件和逐字节事件。
+要**读、复盘、对比、把思维链交给别人** → 用本插件。
+它不能替代备份：附件、request header、内部事件都不在这些产物里。
+
+frontmatter 里的 `derived_from: dsh-session-event-log`（以及 HTML 产物页脚）记录的就是这个区别。
+
 ## 格式
 
 | `format` | 文件 | 结构 |

@@ -232,6 +232,7 @@ test('the Markdown index points at the turn headings it lists', () => {
   assert.match(text, /^---\nschema: dsh-cot\/v1\n/)
   assert.match(text, /\| Turn \| Steps \| CoT chars \| Line \|/)
   assert.match(text, /exported_at: \d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}[+-]\d{2}:\d{2}/)
+  assert.match(text, /^derived_from: dsh-session-event-log$/m, 'the artifact says it is a derived view')
 })
 
 test('the index stays correct when reasoning and answers contain newlines', () => {
@@ -456,6 +457,8 @@ test('the HTML timeline is self-contained, anchorable and escaped', () => {
   assert.match(html, /<section class="turn" id="t1">/)
   assert.match(html, /<details class="box">/)
   assert.match(html, /data-act="expand"/)
+  assert.match(html, /Derived view of the session event log\./, 'the footer names the derived-view boundary')
+  assert.match(html, /Download session log action or \/export/)
 
   // Session text is escaped, never markup.
   assert.ok(!html.includes('<script>alert(1)</script>'), 'reasoning must not inject script tags')
